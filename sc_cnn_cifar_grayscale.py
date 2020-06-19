@@ -61,9 +61,10 @@ is_cifar_10 = True
 
 num_sub_layers = 2
 learning_rate = 0.001
+is_leaky_relu = True
 
 if is_single:
-    num_samples = 10
+    num_samples = 2
     epochs_per_sample = 1000
 else:
     num_samples = 60000
@@ -119,7 +120,7 @@ print(argmax_res)
 
 import keras
 from keras.models import Model
-from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, concatenate, Conv2DTranspose, BatchNormalization, Dropout, Flatten, Dense, Softmax, Reshape, Activation
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, concatenate, Conv2DTranspose, BatchNormalization, Dropout, Flatten, Dense, Softmax, Reshape, Activation, LeakyReLU
 from keras.optimizers import Adam
 from keras.utils import plot_model
 from keras import backend as K
@@ -141,9 +142,12 @@ keras.losses.built_in_softmax_kl_loss = built_in_softmax_kl_loss
 keras.losses.intensity_softmax_loss = intensity_softmax_loss
 
 def conv_layer(n_filters, filter_size, conv):
-    conv = Conv2D(n_filters, filter_size, activation='relu', padding='same')(conv)
-    conv = Conv2D(n_filters, filter_size, activation='relu', padding='same')(conv)
-    conv = Conv2D(n_filters, filter_size, activation='relu', padding='same')(conv)
+    for _ in range(3):
+        if is_leaky_relu:
+            conv = Conv2D(n_filters, filter_size, padding='same')(conv)
+            conv = LeakyReLU()(conv)
+        else:
+            conv = Conv2D(n_filters, filter_size, activation='relu', padding='same')(conv)
     return conv    
  
  
@@ -217,7 +221,7 @@ def unet_model(input_size=(28, 28, 1), n_filters_start=32, growth_factor=2,
     model.summary()
     return model
 
-model = unet_model(input_size=image_shape, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers)
+model = unet_model(input_size=image_shape, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers, learning_rate=learning_rate)
 
 
 
@@ -244,7 +248,7 @@ def mask_image_with_noise(image, is_grayscale=True):
     noise[:amount_of_noise] = True
     np.random.shuffle(mask)
     np.random.shuffle(noise)
-    # pprint(mask1)
+
     output_image = deepcopy(image)
     xor_target = np.full(output_image.shape, False)
 
@@ -406,8 +410,6 @@ print("training samples: {}. validation samples: {}".format(len(training_samples
 steps_per_epoch = int(len(training_samples) * (samples_per_data_item + stops_per_data_item) / batch_size)
 print("steps per epoch: {}".format(steps_per_epoch))
 
-# pprint(training_samples[0])
-
 training_generator = ImageGenerator(
     sample_list=training_samples,
     image_shape=image_shape,
@@ -436,7 +438,7 @@ else:
     is_single_text = "full"
 
 model_custom_name = 'cifar-grayscale-double-softmax'
-model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-{}'.format(model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_single_text)
+model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-{}'.format(model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_single_text)
 model_location = '/opt/program/ar-cnn-image/checkpoints/{}.hdf5'.format(model_full_name)
 log_dir = '/opt/program/ar-cnn-image/logs/{}'.format(model_full_name)
 print(log_dir)
@@ -517,7 +519,7 @@ class EvaluateCallback(keras.callbacks.Callback):
 
 import os
 
-model = unet_model(input_size=image_shape, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers)
+model = unet_model(input_size=image_shape, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers, learning_rate=learning_rate)
 
 resume_training = False
 if resume_training:
