@@ -61,7 +61,8 @@ is_cifar_10 = True
 
 num_sub_layers = 2
 learning_rate = 0.001
-is_leaky_relu = True
+is_leaky_relu = False
+is_batch_norm = True
 
 if is_single:
     num_samples = 2
@@ -120,7 +121,7 @@ print(argmax_res)
 
 import keras
 from keras.models import Model
-from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, concatenate, Conv2DTranspose, BatchNormalization, Dropout, Flatten, Dense, Softmax, Reshape, Activation, LeakyReLU
+from keras.layers import Input, Conv2D, MaxPooling2D, UpSampling2D, concatenate, Conv2DTranspose, BatchNormalization, Dropout, Flatten, Dense, Softmax, Reshape, Activation, LeakyReLU, ReLU
 from keras.optimizers import Adam
 from keras.utils import plot_model
 from keras import backend as K
@@ -143,11 +144,13 @@ keras.losses.intensity_softmax_loss = intensity_softmax_loss
 
 def conv_layer(n_filters, filter_size, conv):
     for _ in range(3):
+        conv = Conv2D(n_filters, filter_size, padding='same')(conv)
+        if is_batch_norm:
+            conv = BatchNormalization()(conv)
         if is_leaky_relu:
-            conv = Conv2D(n_filters, filter_size, padding='same')(conv)
             conv = LeakyReLU()(conv)
         else:
-            conv = Conv2D(n_filters, filter_size, activation='relu', padding='same')(conv)
+            conv = ReLU()(conv)
     return conv    
  
  
@@ -163,8 +166,7 @@ def unet_model(input_size=(28, 28, 1), n_filters_start=32, growth_factor=2,
     hidden_layers = []
     for _ in range(num_sub_layers):
         n_filters *= growth_factor
-        pool = BatchNormalization()(prev_pool)
-        conv = conv_layer(n_filters, (3, 3), pool)
+        conv = conv_layer(n_filters, (3, 3), prev_pool)
         pool = MaxPooling2D(pool_size=(2, 2))(conv)
         pool = Dropout(droprate)(pool)
         prev_pool = pool
@@ -179,7 +181,6 @@ def unet_model(input_size=(28, 28, 1), n_filters_start=32, growth_factor=2,
         up_first = concatenate([Conv2DTranspose(n_filters, (2, 2), strides=(2, 2), padding='same')(conv_mid), hidden_layers[-1]])
     else:
         up_first = concatenate([UpSampling2D(size=(2, 2))(conv_mid), hidden_layers[-1]])
-    up_first = BatchNormalization()(up_first)
     conv_mid_2 = conv_layer(n_filters, (3, 3), up_first)
     conv_mid_2 = Dropout(droprate)(conv_mid_2)
 
@@ -190,7 +191,6 @@ def unet_model(input_size=(28, 28, 1), n_filters_start=32, growth_factor=2,
             up = concatenate([Conv2DTranspose(n_filters, (2, 2), strides=(2, 2), padding='same')(prev_conv), hidden_layers[-i-2]])
         else:
             up = concatenate([UpSampling2D(size=(2, 2))(prev_conv), hidden_layers[-i-2]])
-        up = BatchNormalization()(up)
         conv = conv_layer(n_filters, (3, 3), up)
         conv = Dropout(droprate)(conv)
         prev_conv = conv
@@ -438,7 +438,7 @@ else:
     is_single_text = "full"
 
 model_custom_name = 'cifar-grayscale-double-softmax'
-model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-{}'.format(model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_single_text)
+model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-{}'.format(model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, is_single_text)
 model_location = '/opt/program/ar-cnn-image/checkpoints/{}.hdf5'.format(model_full_name)
 log_dir = '/opt/program/ar-cnn-image/logs/{}'.format(model_full_name)
 print(log_dir)
