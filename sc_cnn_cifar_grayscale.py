@@ -59,6 +59,7 @@ is_single = False
 is_grayscale = True
 is_cifar_10 = True
 
+n_filters_start=32
 num_sub_layers = 2
 learning_rate = 0.001
 is_leaky_relu = False
@@ -154,7 +155,7 @@ def conv_layer(n_filters, filter_size, conv):
     return conv    
  
  
-def unet_model(input_size=(28, 28, 1), n_filters_start=32, growth_factor=2,
+def unet_model(input_size, n_filters_start, growth_factor=2,
                upconv=False, is_grayscale=True, num_sub_layers=2, learning_rate=0.001):
     droprate=0.5
     n_filters = n_filters_start
@@ -221,7 +222,7 @@ def unet_model(input_size=(28, 28, 1), n_filters_start=32, growth_factor=2,
     model.summary()
     return model
 
-model = unet_model(input_size=image_shape, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers, learning_rate=learning_rate)
+model = unet_model(input_size=image_shape, n_filters_start=n_filters_start, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers, learning_rate=learning_rate)
 
 
 
@@ -437,8 +438,8 @@ if is_single:
 else:
     is_single_text = "full"
 
-model_custom_name = 'cifar-grayscale-double-softmax'
-model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-{}'.format(model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, is_single_text)
+model_custom_name = 'cifar-grayscale'
+model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-n_filters-start-{}-{}'.format(model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, n_filters_start, is_single_text)
 model_location = '/opt/program/ar-cnn-image/checkpoints/{}.hdf5'.format(model_full_name)
 log_dir = '/opt/program/ar-cnn-image/logs/{}'.format(model_full_name)
 print(log_dir)
@@ -519,7 +520,7 @@ class EvaluateCallback(keras.callbacks.Callback):
 
 import os
 
-model = unet_model(input_size=image_shape, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers, learning_rate=learning_rate)
+model = unet_model(input_size=image_shape, n_filters_start=n_filters_start, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers, learning_rate=learning_rate)
 
 resume_training = False
 if resume_training:
