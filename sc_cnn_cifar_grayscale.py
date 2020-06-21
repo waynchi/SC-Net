@@ -59,8 +59,8 @@ is_single = False
 is_grayscale = True
 is_cifar_10 = True
 
-n_filters_start=32
-num_sub_layers = 2
+n_filters_start = 128
+num_sub_layers = 1
 learning_rate = 0.001
 is_leaky_relu = False
 is_batch_norm = True
@@ -79,8 +79,8 @@ if is_cifar_10:
 else:
     images = mnist.train_images()
 
-    # np.random.shuffle(images)
 images = images[:num_samples, :, :]
+np.random.shuffle(images)
 
 
 if not is_grayscale:
@@ -351,12 +351,12 @@ class ImageGenerator(keras.utils.Sequence):
         self.save_image(original_image, 'training_original.png')
 
     def generate_validation_samples(self):
-        old_batch_size = self.batch_size
-        self.batch_size = len(self.sample_list) * (self.samples_per_data_item + self.stops_per_data_item)
+        # old_batch_size = self.batch_size
+        # self.batch_size = len(self.sample_list) * (self.samples_per_data_item + self.stops_per_data_item)
         training_input, training_target, training_original = self.generate_training_pairs()
         # training_input = np.asarray(self.training_input[:self.batch_size])
         # training_target = np.asarray(self.training_target[:self.batch_size])
-        self.batch_size = old_batch_size
+        # self.batch_size = old_batch_size
         if self.is_grayscale:
             return training_input, [training_target, training_original]
         else:
