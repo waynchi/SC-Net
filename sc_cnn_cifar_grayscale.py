@@ -71,7 +71,7 @@ if is_single:
     epochs_per_sample = 1000
 else:
     num_samples = 60000
-    epochs_per_sample = 100
+    epochs_per_sample = 10
 
 
 if is_cifar_10:
@@ -549,6 +549,8 @@ if True:
             shuffle=True,
             steps_per_epoch=steps_per_epoch,
             epochs=10000,
+            use_multiprocessing=True,
+            workers=8,
             callbacks=[model_checkpoint_callback, tensorboard_callback, evaluate_callback])#, tensorboard_callback])
     #epochs=cfg.epochs,
     #callbacks=callbacks)
