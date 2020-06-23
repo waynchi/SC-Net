@@ -59,8 +59,9 @@ is_single = False
 is_grayscale = True
 is_cifar_10 = True
 
-n_filters_start = 128
+n_filters_start = 64
 num_sub_layers = 2
+conv_per_layer = 2
 learning_rate = 0.001
 is_leaky_relu = False
 is_batch_norm = True
@@ -144,7 +145,7 @@ keras.losses.built_in_softmax_kl_loss = built_in_softmax_kl_loss
 keras.losses.intensity_softmax_loss = intensity_softmax_loss
 
 def conv_layer(n_filters, filter_size, conv):
-    for _ in range(3):
+    for _ in range(conv_per_layer):
         conv = Conv2D(n_filters, filter_size, padding='same')(conv)
         if is_batch_norm:
             conv = BatchNormalization()(conv)
@@ -223,7 +224,6 @@ def unet_model(input_size, n_filters_start, growth_factor=2,
     return model
 
 model = unet_model(input_size=image_shape, n_filters_start=n_filters_start, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers, learning_rate=learning_rate)
-
 
 
 # discriminator_model = discriminator(input_size=image_shape)
@@ -363,11 +363,6 @@ class ImageGenerator(keras.utils.Sequence):
     def __getitem__(self, index):
         '''Generates 1 batch of data'''
         training_input, training_target, training_original = self.generate_training_pairs()
-        # training_input = np.asarray(self.training_input[:self.batch_size])
-        # training_target = np.asarray(self.training_target[:self.batch_size])
-        # self.training_input = self.training_input[self.batch_size:]
-        # self.training_target = self.training_target[self.batch_size:]
-        # print("training input sum: {}. target sum: {}".format(training_input.sum(), training_target.sum()))
         if is_grayscale:
             return training_input, [training_target, training_original]
         else:
@@ -399,7 +394,7 @@ if is_single:
 else:
     batch_size = 64
     samples_per_data_item = 1
-    split = 0.9
+    split = 0.99
 
 training_samples = images[:int(len(images) * split)]
 validation_samples = images[int(len(images) * split):]
@@ -437,7 +432,8 @@ else:
     is_single_text = "full"
 
 model_custom_name = 'cifar-grayscale'
-model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-n_filters-start-{}-{}'.format(model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, n_filters_start, is_single_text)
+model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-n_filters-start-{}-conv-per-layer-{}-{}'.format(
+model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, n_filters_start, conv_per_layer, is_single_text)
 model_location = '/opt/program/ar-cnn-image/checkpoints/{}.hdf5'.format(model_full_name)
 log_dir = '/opt/program/ar-cnn-image/logs/{}'.format(model_full_name)
 print(log_dir)
