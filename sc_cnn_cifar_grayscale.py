@@ -60,6 +60,7 @@ is_grayscale = True
 is_cifar_10 = True
 
 n_filters_start = 32
+max_filters = 128
 num_sub_layers = 4
 conv_per_layer = 2
 learning_rate = 0.01
@@ -166,19 +167,23 @@ def unet_model(input_size, n_filters_start, growth_factor=2,
 
     prev_pool = pool_first
     hidden_layers = []
+    same_growth_count = 0
     for _ in range(num_sub_layers):
         n_filters *= growth_factor
+        if n_filters > max_filters:
+            same_growth_count += 1
+            n_filters = max_filters
         conv = conv_layer(n_filters, (3, 3), prev_pool)
         pool = MaxPooling2D(pool_size=(2, 2))(conv)
         pool = Dropout(droprate)(pool)
         prev_pool = pool
         hidden_layers.append(conv)
  
-    n_filters *= growth_factor
+    # n_filters *= growth_factor
     conv_mid = conv_layer(n_filters, (3, 3), prev_pool)
     # print(hidden_layers)
  
-    n_filters //= growth_factor
+    # n_filters //= growth_factor
     if upconv:
         up_first = concatenate([Conv2DTranspose(n_filters, (2, 2), strides=(2, 2), padding='same')(conv_mid), hidden_layers[-1]])
     else:
@@ -188,7 +193,10 @@ def unet_model(input_size, n_filters_start, growth_factor=2,
 
     prev_conv = conv_mid_2
     for i in range(num_sub_layers - 1):
-        n_filters //= growth_factor
+        if same_growth_count > 0:
+            same_growth_count -= 1
+        else:
+            n_filters //= growth_factor
         if upconv:
             up = concatenate([Conv2DTranspose(n_filters, (2, 2), strides=(2, 2), padding='same')(prev_conv), hidden_layers[-i-2]])
         else:
@@ -440,8 +448,8 @@ else:
     is_single_text = "full"
 
 model_custom_name = 'cifar-grayscale'
-model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-n_filters-start-{}-decay-epochs-{}-rate-{}-{}'.format(
-model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, n_filters_start, decay_epochs, decay_rate, is_single_text)
+model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-filters-start-{}-max-{}-decay-epochs-{}-rate-{}-{}'.format(
+model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, n_filters_start, max_filters, decay_epochs, decay_rate, is_single_text)
 model_location = '/opt/program/ar-cnn-image/checkpoints/{}.hdf5'.format(model_full_name)
 log_dir = '/opt/program/ar-cnn-image/logs/{}'.format(model_full_name)
 print(log_dir)
