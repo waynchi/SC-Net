@@ -1,0 +1,11 @@
+setuptools
+yapf
+flake8
+keras
+pretty-midi
+matplotlib
+seaborn
+pillow
+pypianoroll
+seaborn
+mnist
