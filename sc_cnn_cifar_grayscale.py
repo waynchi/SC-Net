@@ -59,10 +59,10 @@ is_single = False
 is_grayscale = True
 is_cifar_10 = True
 
-n_filters_start = 64
-num_sub_layers = 2
+n_filters_start = 32
+num_sub_layers = 4
 conv_per_layer = 2
-learning_rate = 0.001
+learning_rate = 0.01
 is_leaky_relu = False
 is_batch_norm = True
 
@@ -71,7 +71,7 @@ if is_single:
     epochs_per_sample = 1000
 else:
     num_samples = 60000
-    epochs_per_sample = 10
+    epochs_per_sample = 100
 
 
 if is_cifar_10:
@@ -211,13 +211,13 @@ def unet_model(input_size, n_filters_start, growth_factor=2,
         sigmoid_out = Reshape((*image_shape[:-1], 256))(sigmoid_out)
         # sigmoid_out = Activation('softmax')(sigmoid_out)
         model = Model(inputs=inputs, outputs=[softmax_out, sigmoid_out])
-        model.compile(optimizer=Adam(lr=learning_rate), loss=[built_in_softmax_kl_loss, intensity_softmax_loss], metrics=['categorical_accuracy'])
+        model.compile(optimizer=Adam(learning_rate=learning_rate), loss=[built_in_softmax_kl_loss, intensity_softmax_loss], metrics=['categorical_accuracy'])
     else:
         intensity_softmax = Conv2D(256 * 3, 1, padding='valid', name='intensity_conv')(conv_last)
         intensity_softmax = Reshape((*image_shape, 256))(intensity_softmax)
         # intensity_softmax = Activation('softmax', name='intensity_softmax')(intensity_softmax)
         model = Model(inputs=inputs, outputs=[softmax_out, intensity_softmax])
-        model.compile(optimizer=Adam(lr=learning_rate), loss=[built_in_softmax_kl_loss, intensity_softmax_loss], metrics=['categorical_accuracy'])
+        model.compile(optimizer=Adam(learning_rate=learning_rate), loss=[built_in_softmax_kl_loss, intensity_softmax_loss], metrics=['categorical_accuracy'])
 
     # model.compile(optimizer=Adam(), loss='binary_crossentropy', metrics=['accuracy'])
     model.summary()
@@ -394,7 +394,7 @@ if is_single:
 else:
     batch_size = 64
     samples_per_data_item = 1
-    split = 0.99
+    split = 0.90
 
 training_samples = images[:int(len(images) * split)]
 validation_samples = images[int(len(images) * split):]
@@ -426,14 +426,22 @@ validation_data = validation_generator.generate_validation_samples()
 
 training_generator.get_random_training_pair()
 
+decay_epochs = 10
+decay_steps = steps_per_epoch * decay_epochs
+decay_rate = 0.96
+lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
+    learning_rate,
+    decay_steps=decay_steps,
+    decay_rate=decay_rate)
+
 if is_single:
     is_single_text = "single"
 else:
     is_single_text = "full"
 
 model_custom_name = 'cifar-grayscale'
-model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-n_filters-start-{}-conv-per-layer-{}-{}'.format(
-model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, n_filters_start, conv_per_layer, is_single_text)
+model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-n_filters-start-{}-decay-epochs-{}-rate-{}-{}'.format(
+model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, n_filters_start, decay_epochs, decay_rate, is_single_text)
 model_location = '/opt/program/ar-cnn-image/checkpoints/{}.hdf5'.format(model_full_name)
 log_dir = '/opt/program/ar-cnn-image/logs/{}'.format(model_full_name)
 print(log_dir)
@@ -514,7 +522,8 @@ class EvaluateCallback(keras.callbacks.Callback):
 
 import os
 
-model = unet_model(input_size=image_shape, n_filters_start=n_filters_start, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers, learning_rate=learning_rate)
+
+model = unet_model(input_size=image_shape, n_filters_start=n_filters_start, is_grayscale=is_grayscale, num_sub_layers=num_sub_layers, learning_rate=lr_schedule)
 
 resume_training = False
 if resume_training:
