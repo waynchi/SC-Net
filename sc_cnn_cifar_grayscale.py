@@ -158,8 +158,8 @@ def conv_layer(n_filters, filter_size, conv):
  
  
 def unet_model(input_size, n_filters_start, growth_factor=2,
-               upconv=False, is_grayscale=True, num_sub_layers=2, learning_rate=0.001):
-    droprate=0.5
+               upconv=True, is_grayscale=True, num_sub_layers=2, learning_rate=0.001):
+    droprate=0.2
     n_filters = n_filters_start
     inputs = Input(input_size)
     conv_first = conv_layer(n_filters, (3, 3), inputs)
@@ -447,7 +447,7 @@ if is_single:
 else:
     is_single_text = "full"
 
-model_custom_name = 'cifar-grayscale'
+model_custom_name = 'cifar-grayscale-upconv-droprate-0.2'
 model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-filters-start-{}-max-{}-decay-epochs-{}-rate-{}-{}'.format(
 model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, n_filters_start, max_filters, decay_epochs, decay_rate, is_single_text)
 model_location = '/opt/program/ar-cnn-image/checkpoints/{}.hdf5'.format(model_full_name)
@@ -566,8 +566,8 @@ if True:
             shuffle=True,
             steps_per_epoch=steps_per_epoch,
             epochs=10000,
-            use_multiprocessing=True,
-            workers=8,
+            # use_multiprocessing=True,
+            # workers=8,
             callbacks=[model_checkpoint_callback, tensorboard_callback, evaluate_callback])#, tensorboard_callback])
     #epochs=cfg.epochs,
     #callbacks=callbacks)
