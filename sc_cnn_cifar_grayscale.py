@@ -44,11 +44,11 @@ def make_grayscale(data, dtype=np.float32):
     rst = r * data[:, :, :, 0] + g * data[:, :, :, 1] + b * data[:, :, :, 2]
     # add channel dimension
     rst = np.expand_dims(rst, axis=3)
-    rst = rst.astype(np.uint8)
+    rst = rst.astype(np.float32)
     return rst
 
 def create_image(image, name, image_shape=(32, 32), is_grayscale=True):
-    img_arr = deepcopy(image.reshape(image_shape)).astype(np.uint8)
+    img_arr = deepcopy(image.reshape(image_shape)).astype(np.float32)
     img = Image.fromarray(img_arr.astype(np.uint8), 'L')
     # pprint(img_arr)
     # print("img shape: {}. img sum: {}".format(img_arr.shape, img_arr.sum()))
@@ -57,13 +57,13 @@ def create_image(image, name, image_shape=(32, 32), is_grayscale=True):
 
 is_single = False
 is_grayscale = True
-is_cifar_10 = True
+is_cifar_10 = False
 
 n_filters_start = 32
 max_filters = 128
-num_sub_layers = 4
+num_sub_layers = 1
 conv_per_layer = 2
-learning_rate = 0.01
+learning_rate = 0.001
 is_leaky_relu = False
 is_batch_norm = True
 
@@ -72,7 +72,7 @@ if is_single:
     epochs_per_sample = 1000
 else:
     num_samples = 60000
-    epochs_per_sample = 100
+    epochs_per_sample = 25
 
 
 if is_cifar_10:
@@ -110,10 +110,10 @@ print(image_shape)
 
 def to_one_hot(arr):
     arr = deepcopy(arr)
-    arr = arr.astype(np.uint8)
+    arr = arr.astype(np.int16)
     n_values = 256
     one_hot = np.eye(n_values)[arr]
-    one_hot = one_hot.astype(np.uint8)
+    one_hot = one_hot.astype(np.float32)
     return one_hot
 
 one_hot = to_one_hot(images[0])
@@ -272,7 +272,7 @@ def mask_image_with_noise(image, is_grayscale=True):
     random_values = np.random.uniform(0, 1, (len(r2), 1))
     random_values *= 255
     random_values = np.around(random_values)
-    random_values = random_values.astype(np.uint8)
+    random_values = random_values.astype(np.float32)
     output_image[r2, c2] = random_values
     xor_target[r2, c2] = True
 
@@ -290,7 +290,7 @@ class ImageGenerator(keras.utils.Sequence):
         self.is_grayscale = is_grayscale
         self.sample_index = 0
         self.seed = seed
-        self.dtype = np.uint8
+        self.dtype = np.float32
         # if self.seed is not None:
         #     np.random.seed(self.seed)
 
@@ -447,7 +447,7 @@ if is_single:
 else:
     is_single_text = "full"
 
-model_custom_name = 'cifar-grayscale-upconv-droprate-0.2'
+model_custom_name = 'mnist-grayscale-upconv-droprate-0.2-float32'
 model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-filters-start-{}-max-{}-decay-epochs-{}-rate-{}-{}'.format(
 model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, n_filters_start, max_filters, decay_epochs, decay_rate, is_single_text)
 model_location = '/opt/program/ar-cnn-image/checkpoints/{}.hdf5'.format(model_full_name)
@@ -473,7 +473,7 @@ class EvaluateCallback(keras.callbacks.Callback):
                 os.makedirs(directory, exist_ok=True)
                 input_image = self.generate_noise()
 
-                img, _ = self.inference(model, input_image, directory, 1500)
+                img, _ = self.inference(model, input_image, directory, 500)
                 generated_images.append(img)
           
             final_im = Image.new('RGB', (image_shape[0] * sample_sqrt, image_shape[1] * sample_sqrt))
@@ -495,7 +495,7 @@ class EvaluateCallback(keras.callbacks.Callback):
 
     def generate_noise(self):
         input_image = np.full(self.image_shape, 0)
-        input_image = input_image.astype(np.uint8)
+        input_image = input_image.astype(np.float32)
         input_image = np.expand_dims(input_image, 0)
         return input_image
 
@@ -566,8 +566,8 @@ if True:
             shuffle=True,
             steps_per_epoch=steps_per_epoch,
             epochs=10000,
-            # use_multiprocessing=True,
-            # workers=8,
+            use_multiprocessing=False,
+            workers=8,
             callbacks=[model_checkpoint_callback, tensorboard_callback, evaluate_callback])#, tensorboard_callback])
     #epochs=cfg.epochs,
     #callbacks=callbacks)
