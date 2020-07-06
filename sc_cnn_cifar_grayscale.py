@@ -57,13 +57,13 @@ def create_image(image, name, image_shape=(32, 32), is_grayscale=True):
 
 is_single = False
 is_grayscale = True
-is_cifar_10 = False
+is_cifar_10 = True
 
-n_filters_start = 32
+n_filters_start = 64
 max_filters = 128
-num_sub_layers = 1
+num_sub_layers = 4
 conv_per_layer = 2
-learning_rate = 0.001
+learning_rate = 0.0001
 is_leaky_relu = False
 is_batch_norm = True
 
@@ -72,7 +72,7 @@ if is_single:
     epochs_per_sample = 1000
 else:
     num_samples = 60000
-    epochs_per_sample = 25
+    epochs_per_sample = 50
 
 
 if is_cifar_10:
@@ -400,7 +400,7 @@ if is_single:
     samples_per_data_item =   1 * 32
     split = 1
 else:
-    batch_size = 64
+    batch_size = 128
     samples_per_data_item = 1
     split = 0.90
 
@@ -434,7 +434,7 @@ validation_data = validation_generator.generate_validation_samples()
 
 training_generator.get_random_training_pair()
 
-decay_epochs = 10
+decay_epochs = 50
 decay_steps = steps_per_epoch * decay_epochs
 decay_rate = 0.96
 lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
@@ -447,7 +447,7 @@ if is_single:
 else:
     is_single_text = "full"
 
-model_custom_name = 'mnist-grayscale-upconv-droprate-0.2-float32'
+model_custom_name = 'cifar-grayscale-upconv-droprate-0.2-float32'
 model_full_name = '{}-num-samples-{}-noise-upper-{}-num-sub-layers-{}-mini-batch-{}-samples-per-item-{}-lr-{}-is-leaky-{}-is-batch-norm-{}-filters-start-{}-max-{}-decay-epochs-{}-rate-{}-{}'.format(
 model_custom_name, num_samples, noise_upper_bound, num_sub_layers, batch_size, samples_per_data_item, learning_rate, is_leaky_relu, is_batch_norm, n_filters_start, max_filters, decay_epochs, decay_rate, is_single_text)
 model_location = '/opt/program/ar-cnn-image/checkpoints/{}.hdf5'.format(model_full_name)
@@ -473,7 +473,7 @@ class EvaluateCallback(keras.callbacks.Callback):
                 os.makedirs(directory, exist_ok=True)
                 input_image = self.generate_noise()
 
-                img, _ = self.inference(model, input_image, directory, 500)
+                img, _ = self.inference(model, input_image, directory, 1500)
                 generated_images.append(img)
           
             final_im = Image.new('RGB', (image_shape[0] * sample_sqrt, image_shape[1] * sample_sqrt))
@@ -566,8 +566,8 @@ if True:
             shuffle=True,
             steps_per_epoch=steps_per_epoch,
             epochs=10000,
-            use_multiprocessing=False,
-            workers=8,
+            # use_multiprocessing=False,
+            # workers=8,
             callbacks=[model_checkpoint_callback, tensorboard_callback, evaluate_callback])#, tensorboard_callback])
     #epochs=cfg.epochs,
     #callbacks=callbacks)
